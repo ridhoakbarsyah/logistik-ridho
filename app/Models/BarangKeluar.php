@@ -10,7 +10,14 @@ class BarangKeluar extends Model
     use HasFactory;
 
     /**
-     * The attributes that are mass assignable.
+     * Nama tabel yang terkait dengan model ini.
+     *
+     * @var string
+     */
+    protected $table = 'barang_keluars';
+
+    /**
+     * Atribut yang dapat diisi secara massal.
      *
      * @var array
      */
@@ -23,12 +30,10 @@ class BarangKeluar extends Model
     ];
 
     /**
-     * The table associated with the model.
+     * Relasi ke model StokBarang berdasarkan kode_barang.
      *
-     * @var string
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    protected $table = 'barang_keluars';
-
     public function stokBarang()
     {
         return $this->belongsTo(StokBarang::class, 'kode_barang', 'kode_barang');

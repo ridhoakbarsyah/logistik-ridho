@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\DB;
 
 class BarangKeluarController extends Controller
 {
-    //
     public function index()
     {
         $barangKeluar = BarangKeluar::all();
@@ -25,39 +24,40 @@ class BarangKeluarController extends Controller
     // Menyimpan data barang keluar
     public function store(Request $request)
     {
+        // Validasi data input
         $data = $request->validate([
-            'no_barang_keluar' => 'required|string',
-            'kode_barang' => 'required|string',
-            'quantity' => 'required|integer',
-            'destination' => 'required|string',
+            'no_barang_keluar' => 'required|string|unique:barang_keluars,no_barang_keluar',
+            'kode_barang' => 'required|string|exists:stok_barangs,kode_barang',
+            'quantity' => 'required|integer|min:1',
+            'destination' => 'required|string|max:255',
             'tanggal_keluar' => 'required|date',
+        ], [
+            'no_barang_keluar.unique' => 'Nomor barang keluar sudah digunakan.',
+            'kode_barang.exists' => 'Kode barang tidak ditemukan dalam stok.',
+            'quantity.min' => 'Jumlah barang harus lebih dari nol.',
         ]);
 
-        // Periksa duplikasi data berdasarkan no_barang_keluar
-        $existingRecord = BarangKeluar::where('no_barang_keluar', $data['no_barang_keluar'])
-            ->where('kode_barang', $data['kode_barang'])
-            ->where('tanggal_keluar', $data['tanggal_keluar'])
-            ->first();
+        try {
+            // Periksa stok barang
+            $stok = StokBarang::where('kode_barang', $data['kode_barang'])->first();
 
-        if ($existingRecord) {
-            return redirect()->back()->with('error', 'Data barang keluar sudah tercatat sebelumnya.');
+            if (!$stok || $stok->stok < $data['quantity']) {
+                return redirect()->back()->with('error', 'Stok barang tidak mencukupi.');
+            }
+
+            // Gunakan transaksi untuk menjaga konsistensi data
+            DB::transaction(function () use ($data, $stok) {
+                // Simpan barang keluar
+                BarangKeluar::create($data);
+
+                // Kurangi stok
+                $stok->decrement('stok', $data['quantity']);
+            });
+
+            return redirect()->route('barang-keluar.index')->with('success', 'Barang keluar berhasil dicatat.');
+        } catch (\Exception $e) {
+            // Tangani kesalahan dan rollback transaksi
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat mencatat barang keluar: ' . $e->getMessage());
         }
-
-        // Periksa stok barang
-        $stok = StokBarang::where('kode_barang', $data['kode_barang'])->first();
-        if (!$stok || $stok->stok < $data['quantity']) {
-            return redirect()->back()->with('error', 'Stok barang tidak mencukupi.');
-        }
-
-        // Gunakan transaksi untuk menghindari inkonsistensi data
-        DB::transaction(function () use ($data, $stok) {
-            // Simpan barang keluar
-            BarangKeluar::create($data);
-
-            // Kurangi stok
-            $stok->decrement('stok', $data['quantity']);
-        });
-
-        return redirect()->route('barang-keluar.index')->with('success', 'Barang keluar berhasil dicatat.');
     }
 }

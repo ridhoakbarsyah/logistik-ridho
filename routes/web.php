@@ -14,8 +14,10 @@ Route::get('barang-masuk/create', [BarangMasukController::class, 'create'])->nam
 Route::post('barang-masuk', [BarangMasukController::class, 'store'])->name('barang-masuk.store');
 
 
-Route::get('/barang-keluar', [BarangKeluarController::class, 'index']);
-Route::get('/barang-keluar/create', [BarangKeluarController::class, 'create']);
-Route::post('/barang-keluar', [BarangKeluarController::class, 'store']);
+Route::prefix('barang-keluar')->name('barang-keluar.')->group(function () {
+    Route::get('/', [BarangKeluarController::class, 'index'])->name('index');
+    Route::get('/create', [BarangKeluarController::class, 'create'])->name('create');
+    Route::post('/', [BarangKeluarController::class, 'store'])->name('store');
+});
 
 Route::get('/stok-barang', [StokBarangController::class, 'index']);
